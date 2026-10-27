@@ -19,13 +19,20 @@ service cloud.firestore {
       return isSignedIn() && exists(userPath) && get(userPath).data.role == 'worker';
     }
 
+    // Helper to check if current user is an isolated demo reviewer
+    function isDemoUser() {
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return isSignedIn() && exists(userPath) && ('isDemo' in get(userPath).data) && get(userPath).data.isDemo == true;
+    }
+
     // Base user documents and role-specific profiles
     match /users/{userId} {
       allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       allow list: if isSignedIn() && isAdmin();
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow delete: if isSignedIn() && isAdmin();
+      // Prevent demo accounts from deleting real user accounts
+      allow delete: if isSignedIn() && isAdmin() && !isDemoUser();
       
       // Allow access to all nested profile data for owners and admins
       match /{allPaths=**} {
@@ -38,7 +45,8 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (isAdmin() || isWorker());
-      allow delete: if isSignedIn() && isAdmin();
+      // Prevent demo accounts from permanently purging municipal complaints
+      allow delete: if isSignedIn() && isAdmin() && !isDemoUser();
     }
 
     // Broadcast notifications - Explicitly allow list/get for all signed-in users

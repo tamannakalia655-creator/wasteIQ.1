@@ -5,7 +5,7 @@ import { wasteDisposalAssistant, WasteDisposalAssistantOutput } from "@/ai/flows
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, Loader2, Sparkles, AlertCircle, Info, Lightbulb, Trash2, ArrowLeft } from "lucide-react"
+import { Search, Loader2, Sparkles, AlertCircle, Info, Lightbulb, Trash2, ArrowLeft, Leaf } from "lucide-react"
 import Link from "next/link"
 
 export default function DisposalGuide() {
@@ -158,30 +158,12 @@ export default function DisposalGuide() {
         {!loading && !result && !error && (
           <div className="py-20 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-muted/50 text-muted-foreground">
-              <LeafIcon className="h-8 w-8 opacity-40" />
+              <Leaf className="h-8 w-8 opacity-40 text-primary" />
             </div>
             <p className="text-sm font-medium text-muted-foreground">Waiting for your query...</p>
           </div>
         )}
       </main>
     </div>
-  )
-}
-
-function LeafIcon({ className }: { className?: string }) {
-  return (
-    <svg 
-      className={className}
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-    >
-      <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8a7 7 0 0 1-10 10Z" />
-      <path d="M11 20c-1.2.9-2.8 1.4-4.5 1.4A5.5 5.5 0 0 1 1 15.9c0-1.7.5-3.3 1.4-4.5" />
-      <path d="M11 20 21 10" />
-    </svg>
   )
 }

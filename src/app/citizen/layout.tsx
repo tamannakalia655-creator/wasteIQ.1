@@ -10,6 +10,8 @@ import { doc } from "firebase/firestore"
 import { Loader2 } from "lucide-react"
 import { ChatBot } from "@/components/ChatBot"
 
+import { BottomNav } from "@/components/layout/bottom-nav"
+
 export default function CitizenLayout(props: {
   children: React.ReactNode
 }) {
@@ -47,11 +49,14 @@ export default function CitizenLayout(props: {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar role="citizen" />
-        <main className="flex-1 relative">
-          <div className="md:hidden absolute top-4 left-4 z-50">
-            <SidebarTrigger className="bg-white/80 backdrop-blur-md shadow-sm rounded-xl" />
+        <main className="flex-1 relative pb-16 md:pb-0">
+          <div className="md:hidden absolute top-4 left-4 z-40">
+            <SidebarTrigger className="bg-white/90 backdrop-blur-md shadow-sm rounded-xl" />
           </div>
           {children}
+          <div className="md:hidden">
+            <BottomNav role="citizen" />
+          </div>
           <ChatBot />
         </main>
       </div>

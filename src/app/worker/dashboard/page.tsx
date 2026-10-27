@@ -96,14 +96,12 @@ export default function WorkerDashboard() {
               <h3 className="text-2xl font-bold">Working Hard?</h3>
               <p className="text-sm opacity-80">Check your current queue of reports.</p>
             </div>
-            <div className="h-16 w-16 flex-shrink-0">
-               <div className="relative h-full w-full flex items-center justify-center">
-                  <svg className="h-full w-full" viewBox="0 0 36 36">
-                    <path className="stroke-white/20" strokeWidth="3" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    <path className="stroke-white" strokeWidth="3" strokeDasharray="67, 100" strokeLinecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                  </svg>
-                  <span className="absolute text-[10px] font-bold">LIVE</span>
-               </div>
+            <div className="h-14 w-14 rounded-2xl bg-white/10 border border-white/20 flex flex-col items-center justify-center flex-shrink-0 text-white">
+              <span className="relative flex h-3 w-3 mb-1">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+              </span>
+              <span className="text-[10px] font-bold tracking-wider uppercase">ACTIVE</span>
             </div>
           </CardContent>
         </Card>

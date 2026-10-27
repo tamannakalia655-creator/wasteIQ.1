@@ -174,6 +174,93 @@ Follow these primary disposal examples exactly when applicable:
 Query: {{{query}}}`,
 });
 
+const FALLBACK_DISPOSAL_GUIDE: Record<string, WasteDisposalAssistantOutput> = {
+  "plastic": {
+    wasteType: "Plastic Container / Bottle",
+    category: "Dry / Recyclable Waste",
+    bin: "🔵 Blue Bin",
+    instruction: "Rinse out any liquid residue, crush to reduce volume, and place in the dry waste bin.",
+    tip: "Clean plastics are recycled into textile fibers and municipal construction material."
+  },
+  "bottle": {
+    wasteType: "Plastic / Glass Bottle",
+    category: "Dry / Recyclable Waste",
+    bin: "🔵 Blue Bin",
+    instruction: "Empty completely, rinse with water, and remove the plastic seal or cap.",
+    tip: "Glass can be recycled indefinitely without degradation."
+  },
+  "pizza": {
+    wasteType: "Pizza Box",
+    category: "Dry / Recyclable (if clean) or Wet (if oily)",
+    bin: "🔵 Blue Bin / 🟢 Green Bin",
+    instruction: "Tear off clean top cardboard for recycling (Blue Bin); put greasy food-stained bottom in Green Bin.",
+    tip: "Oil and melted cheese contaminate paper recycling pulp."
+  },
+  "peel": {
+    wasteType: "Vegetable / Fruit Peels",
+    category: "Wet / Biodegradable Waste",
+    bin: "🟢 Green Bin",
+    instruction: "Place directly into the green compostable bin without any plastic wrappers or bags.",
+    tip: "Food scraps can be turned into organic compost for household gardens."
+  },
+  "banana": {
+    wasteType: "Banana Peel",
+    category: "Wet / Biodegradable Waste",
+    bin: "🟢 Green Bin",
+    instruction: "Drop directly in the green wet waste bucket.",
+    tip: "Banana peels are rich in potassium and decompose quickly in compost."
+  },
+  "coconut": {
+    wasteType: "Coconut Shell / Husk",
+    category: "Wet / Garden Biomass",
+    bin: "🟢 Green Bin",
+    instruction: "Break into smaller pieces if possible to assist municipal composting.",
+    tip: "Coconut husks are processed into organic coir and soil conditioners."
+  },
+  "battery": {
+    wasteType: "Used Battery (AA / AAA / Button)",
+    category: "Hazardous / Toxic Waste",
+    bin: "🔴 Red Bin (Hazardous)",
+    instruction: "Store safely in a dry bag and hand over to municipal e-waste collection or Red Bins.",
+    tip: "Never throw batteries in regular waste; heavy metals like cadmium pollute groundwater."
+  },
+  "chips": {
+    wasteType: "Multi-layered Plastic (Chips / Biscuit Wrapper)",
+    category: "Dry / Non-Recyclable MLP",
+    bin: "🔵 Blue Bin (Dry Waste)",
+    instruction: "Empty all crumbs and place into dry waste. In Baripada, these are sent for co-processing in cement kilns.",
+    tip: "Try carrying reusable snack boxes to minimize single-use packaging."
+  },
+  "milk": {
+    wasteType: "Milk Pouch",
+    category: "Dry / Recyclable Low-Density Polyethylene",
+    bin: "🔵 Blue Bin",
+    instruction: "Snip only a corner (avoid cutting a tiny detached tip), rinse with water, and keep dry.",
+    tip: "Rinsed milk pouches have high recycling value in municipal sorting centers."
+  },
+  "charger": {
+    wasteType: "Old Cable / Charger / Earphones",
+    category: "Electronic Waste (E-Waste)",
+    bin: "🔴 Red Bin / Authorized E-Waste Center",
+    instruction: "Hand over at ward e-waste dropoff drives or designated municipal e-waste bins.",
+    tip: "E-waste contains recoverable copper and rare earth metals."
+  },
+  "mask": {
+    wasteType: "Surgical / Used Mask",
+    category: "Biomedical Waste",
+    bin: "🔴 Red Bin (Sanitary / Hazardous)",
+    instruction: "Cut the earloops, wrap securely in clean newspaper, and mark with a red dot.",
+    tip: "Wrapping prevents exposure to sanitation staff."
+  },
+  "pad": {
+    wasteType: "Sanitary Pad / Diaper",
+    category: "Sanitary / Hazardous Waste",
+    bin: "🔴 Red Bin",
+    instruction: "Wrap securely in the provided bag or newspaper before disposal in Red Bin.",
+    tip: "Never flush sanitary items; they clog municipal drainage networks."
+  }
+};
+
 const wasteDisposalAssistantFlow = ai.defineFlow(
   {
     name: 'wasteDisposalAssistantFlow',
@@ -181,7 +268,48 @@ const wasteDisposalAssistantFlow = ai.defineFlow(
     outputSchema: WasteDisposalAssistantOutputSchema,
   },
   async (input) => {
-    const {output} = await wasteDisposalAssistantPrompt(input);
-    return output!;
+    try {
+      const {output} = await wasteDisposalAssistantPrompt(input);
+      if (output) return output;
+    } catch (err) {
+      console.error("wasteDisposalAssistantPrompt failed, using verified municipal rules fallback:", err);
+    }
+
+    // Match query against curated verified Indian municipal waste guidelines
+    const q = input.query.toLowerCase();
+    for (const [key, item] of Object.entries(FALLBACK_DISPOSAL_GUIDE)) {
+      if (q.includes(key)) {
+        return item;
+      }
+    }
+
+    // Generic fallback based on wet vs dry keyword heuristics
+    if (q.includes("food") || q.includes("leaf") || q.includes("tea") || q.includes("egg") || q.includes("rice") || q.includes("curry")) {
+      return {
+        wasteType: "Organic Food / Kitchen Waste",
+        category: "Wet / Biodegradable Waste",
+        bin: "🟢 Green Bin",
+        instruction: "Place in the green compostable bin without any plastic wrappers or plastic containers.",
+        tip: "Composting organic kitchen waste keeps up to 50% of municipal waste out of landfills."
+      };
+    }
+
+    if (q.includes("paper") || q.includes("can") || q.includes("box") || q.includes("metal") || q.includes("glass") || q.includes("cup")) {
+      return {
+        wasteType: "Recyclable Packaging / Paper",
+        category: "Dry / Recyclable Waste",
+        bin: "🔵 Blue Bin",
+        instruction: "Keep clean and dry, flatten packaging where possible, and place into the blue dry waste bin.",
+        tip: "Recycling clean paper and cardboard saves trees and municipal water resources."
+      };
+    }
+
+    return {
+      wasteType: input.query,
+      category: "Dry Waste (General Municipal Classification)",
+      bin: "🔵 Blue Bin (Dry Waste)",
+      instruction: "Ensure the item is dry and free of organic food residues before placing in the blue dry bin.",
+      tip: "When in doubt, keep wet (food/organic) and dry (packaging/solid) items in separate household bins."
+    };
   }
 );

@@ -77,7 +77,8 @@ export function AppSidebar({ role }: { role: 'citizen' | 'worker' | 'admin' }) {
   const workerItems: NavItem[] = [
     { label: 'Duty Dashboard', href: '/worker/dashboard', icon: Home },
     { label: 'Assigned Tasks', href: '/worker/tasks', icon: ClipboardList },
-    { label: 'Bin Monitoring', href: '/worker/bins', icon: Trash2 },
+    { label: 'Smart Bins', href: '/worker/bins', icon: Trash2 },
+    { label: 'Pickup Route', href: '/worker/route', icon: Map },
   ]
 
   const adminItems: NavItem[] = [
@@ -86,7 +87,7 @@ export function AppSidebar({ role }: { role: 'citizen' | 'worker' | 'admin' }) {
     { label: 'Sanitation Workers', href: '/admin/workers', icon: Users },
     { label: 'Citizen Base', href: '/admin/users', icon: User },
     { label: 'Smart Bins', href: '/admin/bins', icon: Trash2 },
-    { label: 'City Map', href: '/admin/map', icon: Map },
+    { label: 'Waste Map', href: '/admin/map', icon: Map },
     { label: 'Reports & Data', href: '/admin/reports', icon: BarChart3 },
   ]
 
@@ -193,7 +194,17 @@ export function AppSidebar({ role }: { role: 'citizen' | 'worker' | 'admin' }) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4">
+      <SidebarFooter className="p-4 space-y-2">
+        {isDemo && (
+          <div className="rounded-xl bg-amber-50/90 border border-amber-200/80 p-2.5 text-center group-data-[collapsible=icon]:hidden">
+            <span className="text-[10px] font-bold text-amber-900 block">
+              Evaluation Demo Mode
+            </span>
+            <span className="text-[9px] text-amber-700 block">
+              Sample Baripada Dataset
+            </span>
+          </div>
+        )}
         <div className="rounded-2xl bg-muted/50 p-3 group-data-[collapsible=icon]:p-2 transition-all">
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="h-10 w-10 flex-shrink-0 rounded-xl bg-white p-0.5 shadow-sm">
@@ -203,17 +214,21 @@ export function AppSidebar({ role }: { role: 'citizen' | 'worker' | 'admin' }) {
                 alt="Profile" 
               />
             </div>
-            <div className="flex flex-col group-data-[collapsible=icon]:hidden">
+            <div className="flex flex-col group-data-[collapsible=icon]:hidden min-w-0 flex-1">
               <span className="text-sm font-bold truncate">
                 {isProfileLoading ? "..." : displayName}
               </span>
               <span className="text-[10px] text-muted-foreground truncate uppercase font-bold">
-                {displaySub}
+                {isDemo ? "Demo Reviewer" : displaySub}
               </span>
             </div>
-            <Link href="/" className="ml-auto group-data-[collapsible=icon]:hidden">
-              <LogOut className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-            </Link>
+            <button 
+              onClick={handleSignOut}
+              title="Sign Out / Switch Role"
+              className="ml-auto p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-destructive transition-colors group-data-[collapsible=icon]:hidden"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </SidebarFooter>

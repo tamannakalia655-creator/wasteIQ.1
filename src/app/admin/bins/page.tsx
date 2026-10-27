@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Search, Filter, Trash2, MapPin, AlertCircle, CheckCircle2, Settings } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import Link from "next/link"
 
 export default function BinMonitoring() {
   const [selectedWard, setSelectedWard] = useState<string>("all")
@@ -35,10 +36,18 @@ export default function BinMonitoring() {
           <h1 className="text-3xl font-bold tracking-tight">Smart Bin Network</h1>
           <p className="text-muted-foreground font-medium">Real-time telemetry from 140 sensor-enabled bins</p>
         </div>
-        <Button className="rounded-xl font-bold flex gap-2">
-          <Settings className="h-4 w-4" />
-          Configure Alerts
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild className="rounded-xl font-bold flex gap-2">
+            <Link href="/admin/map">
+              <MapPin className="h-4 w-4 text-primary" />
+              GIS Waste Map
+            </Link>
+          </Button>
+          <Button className="rounded-xl font-bold flex gap-2">
+            <Settings className="h-4 w-4" />
+            Configure Alerts
+          </Button>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -128,6 +137,10 @@ export default function BinMonitoring() {
                   <MapPin className="h-3 w-3" />
                   {bin.location}
                 </p>
+                <div className="flex items-center justify-between text-[9px] text-muted-foreground pt-1">
+                  <span>Battery: {bin.batteryLevel}%</span>
+                  <span>Cleaned: {bin.lastCleaned}</span>
+                </div>
               </div>
 
               <div className="space-y-1.5">
@@ -143,8 +156,16 @@ export default function BinMonitoring() {
               </div>
 
               <div className="pt-2 flex items-center justify-between gap-2">
-                 <Button variant="ghost" className="text-[10px] font-bold uppercase h-8 px-2 flex-1">Audit Log</Button>
-                 <Button variant="outline" className="text-[10px] font-bold uppercase h-8 px-2 flex-1 rounded-lg">Notify Crew</Button>
+                <Button variant="ghost" className="text-[10px] font-bold uppercase h-8 px-2 flex-1" asChild>
+                  <a href={`https://www.google.com/maps/dir/?api=1&destination=${bin.lat},${bin.lng}`} target="_blank" rel="noopener noreferrer">
+                    Directions
+                  </a>
+                </Button>
+                <Button variant="outline" className="text-[10px] font-bold uppercase h-8 px-2 flex-1 rounded-lg" asChild>
+                  <Link href="/admin/map">
+                    View on Map
+                  </Link>
+                </Button>
               </div>
             </CardContent>
           </Card>

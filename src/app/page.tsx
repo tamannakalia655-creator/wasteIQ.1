@@ -19,11 +19,11 @@ export default function LandingPage() {
             <Leaf className="h-10 w-10" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">WasteIQ Baripada</h1>
-            <p className="text-muted-foreground">Smarter Waste. Cleaner City.</p>
-            <div className="mt-2 flex items-center justify-center gap-1 text-xs font-bold text-primary uppercase">
-              <MapPin className="h-3 w-3" />
-              Serving all 28 Wards
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">WasteIQ</h1>
+            <p className="text-muted-foreground font-medium mt-1">Smarter Waste Management. Cleaner Communities.</p>
+            <div className="mt-2 flex items-center justify-center gap-1.5 text-xs font-bold text-primary uppercase tracking-wide">
+              <MapPin className="h-3.5 w-3.5" />
+              Baripada Municipal Corporation • All 28 Wards
             </div>
           </div>
         </div>

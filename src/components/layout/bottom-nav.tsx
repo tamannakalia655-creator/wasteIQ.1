@@ -16,8 +16,8 @@ export function BottomNav({ role }: { role: 'citizen' | 'worker' }) {
 
   const citizenItems: NavItem[] = [
     { label: 'Home', href: '/citizen/dashboard', icon: Home },
-    { label: 'Bins', href: '/citizen/bins', icon: Trash2 },
-    { label: 'Map', href: '/citizen/map', icon: Map },
+    { label: 'Smart Bins', href: '/citizen/bins', icon: Trash2 },
+    { label: 'Waste Map', href: '/citizen/map', icon: Map },
     { label: 'Rewards', href: '/citizen/rewards', icon: Trophy },
     { label: 'Profile', href: '/citizen/profile', icon: User },
   ]
@@ -25,8 +25,8 @@ export function BottomNav({ role }: { role: 'citizen' | 'worker' }) {
   const workerItems: NavItem[] = [
     { label: 'Home', href: '/worker/dashboard', icon: Home },
     { label: 'Tasks', href: '/worker/tasks', icon: ClipboardList },
-    { label: 'Bins', href: '/worker/bins', icon: Trash2 },
-    { label: 'Route', href: '/worker/route', icon: Map },
+    { label: 'Smart Bins', href: '/worker/bins', icon: Trash2 },
+    { label: 'Route Map', href: '/worker/route', icon: Map },
     { label: 'Profile', href: '/worker/profile', icon: User },
   ]
 

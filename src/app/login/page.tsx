@@ -1,18 +1,36 @@
-
 "use client"
 
-import { useState, Suspense, useEffect } from "react"
+import { useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Eye, EyeOff, ArrowLeft, Leaf, ShieldCheck, Loader2, Info, Briefcase } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { 
+  Eye, 
+  EyeOff, 
+  ArrowLeft, 
+  Leaf, 
+  ShieldCheck, 
+  Loader2, 
+  Info, 
+  Briefcase, 
+  Sparkles, 
+  CheckCircle2, 
+  ShieldAlert, 
+  Lock, 
+  Compass, 
+  ClipboardList,
+  AlertTriangle
+} from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { signInWithEmailAndPassword } from "firebase/auth"
 import { doc, getDoc, onSnapshot } from "firebase/firestore"
 import { useAuth, useFirestore, setDocumentNonBlocking } from "@/firebase"
+import { startReviewerDemoSession } from "@/lib/demo-auth"
 
 function LoginForm() {
   const searchParams = useSearchParams()
@@ -20,16 +38,21 @@ function LoginForm() {
   const { toast } = useToast()
   const auth = useAuth()
   const db = useFirestore()
-  const role = searchParams.get('role') || 'citizen'
+  const roleParam = searchParams.get('role') || 'citizen'
   
+  // Tab state: default to 'demo' if reviewing admin/worker or query param is set
+  const [activeTab, setActiveTab] = useState<string>("demo")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [demoLoadingRole, setDemoLoadingRole] = useState<"admin" | "worker" | null>(null)
   const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
+  const [demoNotice, setDemoNotice] = useState<string | null>(null)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Standard Email/Password Sign-In
+  const handleStandardSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!identifier || !password || !db) return
+    if (!identifier || !password || !db || !auth) return
     
     setLoading(true)
 
@@ -39,16 +62,15 @@ function LoginForm() {
       const loginEmail = isOfficialAdminUsername ? "admin@baripada.gov" : trimmedId
       const loginPassword = isOfficialAdminUsername ? "admin@123" : password
 
-      // 1. Attempt Authentication
+      // 1. Attempt Authentication with Firebase
       const userCredential = await signInWithEmailAndPassword(auth, loginEmail, loginPassword)
       const user = userCredential.user
 
-      // 2. Initial Role Check
+      // 2. Initial Role Check and Document Sync
       const userDocRef = doc(db, "users", user.uid)
       const userDoc = await getDoc(userDocRef)
       
       if (!userDoc.exists()) {
-        // First-time initialization for special accounts
         if (isOfficialAdminUsername) {
           setDocumentNonBlocking(userDocRef, {
             id: user.uid,
@@ -93,19 +115,17 @@ function LoginForm() {
       }
 
       // 3. Wait for database sync before redirecting
-      // This prevents Permission Errors on the next page by ensuring the rule get() succeeds
       const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
         if (snapshot.exists()) {
           const actualRole = snapshot.data().role
           
-          // Role-Gate Verification
-          if (role === 'admin' && actualRole !== 'admin') {
+          if (roleParam === 'admin' && actualRole !== 'admin') {
             unsubscribe()
             setLoading(false)
             toast({ variant: "destructive", title: "Access Denied", description: "This is not an admin account." })
             return
           }
-          if (role === 'worker' && actualRole !== 'worker') {
+          if (roleParam === 'worker' && actualRole !== 'worker') {
             unsubscribe()
             setLoading(false)
             toast({ variant: "destructive", title: "Access Denied", description: "This is not a worker account." })
@@ -128,93 +148,282 @@ function LoginForm() {
     }
   }
 
-  const isAdminPortal = role === 'admin' || identifier === 'admin@baripadawasteIQ';
-  const isWorkerPortal = role === 'worker';
-  const roleTitle = isAdminPortal ? 'Admin Portal' : isWorkerPortal ? 'Worker Access' : 'Citizen Login';
+  // Reviewer Demo Launch Handler
+  const handleLaunchDemo = async (role: "admin" | "worker") => {
+    if (!auth || !db) {
+      toast({
+        variant: "destructive",
+        title: "Firebase Connecting...",
+        description: "Please wait a moment while Firebase initializes."
+      })
+      return
+    }
+
+    setDemoLoadingRole(role)
+    setDemoNotice(null)
+
+    try {
+      const res = await startReviewerDemoSession(auth, db, role)
+      
+      toast({
+        title: `Authenticated as ${role === 'admin' ? 'Municipal Admin' : 'Sanitation Worker'}`,
+        description: `Logged in to isolated sandbox under real Firebase Auth (${res.isAnonymousFallback ? 'Anonymous Token' : 'Demo Account'}).`
+      })
+
+      // Short pause to ensure Firestore listener state stabilizes
+      setTimeout(() => {
+        router.push(`/${role}/dashboard`)
+      }, 350)
+    } catch (err: any) {
+      setDemoLoadingRole(null)
+      console.error("Demo launch failed:", err)
+      setDemoNotice(err.message || "Failed to initialize demo session.")
+      toast({
+        variant: "destructive",
+        title: "Demo Authentication Error",
+        description: err.message || "Could not launch reviewer demo session."
+      })
+    }
+  }
+
+  const isAdminPortal = roleParam === 'admin'
+  const isWorkerPortal = roleParam === 'worker'
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
-      <div className="mb-6 flex w-full max-w-md items-center justify-between">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/"><ArrowLeft className="h-5 w-5" /></Link>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50/70 py-10 px-4">
+      {/* Top Bar Header */}
+      <div className="mb-6 flex w-full max-w-lg items-center justify-between">
+        <Button variant="ghost" size="sm" asChild className="rounded-xl gap-1 text-muted-foreground hover:text-foreground">
+          <Link href="/">
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Home</span>
+          </Link>
         </Button>
-        <div className="flex items-center gap-2 text-primary">
-          <Leaf className="h-6 w-6" />
-          <span className="font-bold text-lg">WasteIQ</span>
+        <div className="flex items-center gap-2 text-primary font-bold">
+          <Leaf className="h-5 w-5" />
+          <span>WasteIQ · Baripada</span>
         </div>
-        <div className="w-10" />
+        <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-semibold border-emerald-300 text-emerald-800 bg-emerald-50">
+          Civic Tech
+        </Badge>
       </div>
 
-      <Card className="w-full max-w-md border-none shadow-2xl shadow-primary/5">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            {isAdminPortal ? <ShieldCheck className="h-7 w-7" /> : isWorkerPortal ? <Briefcase className="h-7 w-7" /> : <Leaf className="h-7 w-7" />}
+      <Card className="w-full max-w-lg border border-border/70 shadow-xl bg-white rounded-2xl overflow-hidden">
+        <CardHeader className="text-center pb-4 pt-6 bg-gradient-to-b from-emerald-50/60 to-white border-b border-border/40">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            {isAdminPortal ? <ShieldCheck className="h-6 w-6" /> : isWorkerPortal ? <Briefcase className="h-6 w-6" /> : <Leaf className="h-6 w-6" />}
           </div>
-          <CardTitle className="text-2xl font-bold">{roleTitle}</CardTitle>
-          <CardDescription>Secure access to the Baripada WasteIQ platform.</CardDescription>
+          <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
+            WasteIQ Access Portal
+          </CardTitle>
+          <CardDescription className="text-xs text-muted-foreground max-w-sm mx-auto">
+            Smart municipal waste management and citizen participation platform for Baripada, Odisha.
+          </CardDescription>
+
+          {/* Mode Switch Tabs */}
+          <div className="mt-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 rounded-xl bg-muted/70 p-1">
+                <TabsTrigger value="demo" className="rounded-lg text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5 text-emerald-600" />
+                  Judge / Reviewer Demo
+                </TabsTrigger>
+                <TabsTrigger value="credentials" className="rounded-lg text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+                  <Lock className="h-3.5 w-3.5 mr-1.5 text-slate-500" />
+                  Standard Login
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="id">{isAdminPortal ? 'Admin Username' : 'Email Address'}</Label>
-              <Input 
-                id="id" 
-                type="text"
-                placeholder={isAdminPortal ? "admin@baripadawasteIQ" : "your@email.com"} 
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                required 
-                className="h-11 rounded-xl"
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+
+        <CardContent className="pt-6 space-y-6">
+          {/* TAB 1: REVIEWER DEMO ACCESS */}
+          {activeTab === "demo" && (
+            <div className="space-y-4">
+              <div className="rounded-xl bg-emerald-50/80 border border-emerald-200/80 p-3.5 text-left">
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge className="bg-emerald-700 text-white text-[10px] font-bold">
+                    My Bharat Social Hack
+                  </Badge>
+                  <span className="text-xs font-bold text-emerald-900">
+                    Evaluation Sandbox
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-800 leading-relaxed">
+                  Review the protected municipal panels with real Firebase authentication and isolated sample Baripada data. Real citizen and administrative records remain secure.
+                </p>
               </div>
-              <div className="relative">
-                <Input 
-                  id="password" 
-                  type={showPassword ? "text" : "password"} 
-                  placeholder="••••••••" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required 
-                  className="h-11 rounded-xl pr-10"
-                />
-                <button 
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+
+              {demoNotice && (
+                <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900 flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <strong className="font-semibold">Setup Notice:</strong> {demoNotice}
+                  </div>
+                </div>
+              )}
+
+              {/* Option A: Admin Demo */}
+              <div className="rounded-xl border border-border p-4 bg-white hover:border-primary/40 transition-all space-y-3 shadow-sm">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-9 w-9 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700">
+                      <ShieldCheck className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-foreground">Municipal Admin Demo</h4>
+                      <p className="text-[11px] text-muted-foreground">Urban Local Body (ULB) Executive Oversight</p>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="text-[10px] font-medium bg-emerald-100/60 text-emerald-800">
+                    Protected
+                  </Badge>
+                </div>
+
+                <ul className="text-[11px] text-muted-foreground space-y-1.5 border-t border-border/50 pt-2.5">
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 flex-shrink-0" />
+                    <span>Live citizen complaint triage & worker task allocation</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 flex-shrink-0" />
+                    <span>Baripada 28-ward smart bin telemetry & GIS route monitoring</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 flex-shrink-0" />
+                    <span>Protected sandbox: sensitive system secrets & real users locked</span>
+                  </li>
+                </ul>
+
+                <Button 
+                  onClick={() => handleLaunchDemo("admin")}
+                  disabled={demoLoadingRole !== null}
+                  className="w-full rounded-xl font-bold text-xs h-10 bg-emerald-700 hover:bg-emerald-800 text-white"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+                  {demoLoadingRole === "admin" ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Authenticating Admin Session...
+                    </>
+                  ) : (
+                    "Launch Admin Demo (Reviewer Mode)"
+                  )}
+                </Button>
               </div>
-            </div>
-            <Button type="submit" className="w-full h-12 rounded-xl font-semibold" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Verifying...
-                </>
-              ) : "Sign In"}
-            </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-4 border-t py-6">
-          {isAdminPortal && (
-            <div className="rounded-xl bg-blue-50 p-3 border border-blue-100 flex gap-2 text-left">
-              <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-              <p className="text-[10px] text-blue-800 font-medium">
-                Official Admin Access: Designated username and password provided by the municipality.
-              </p>
+
+              {/* Option B: Worker Demo */}
+              <div className="rounded-xl border border-border p-4 bg-white hover:border-primary/40 transition-all space-y-3 shadow-sm">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-9 w-9 rounded-xl bg-sky-100 flex items-center justify-center text-sky-700">
+                      <Briefcase className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-foreground">Sanitation Field Worker Demo</h4>
+                      <p className="text-[11px] text-muted-foreground">On-Ground Duty & Task Execution</p>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="text-[10px] font-medium bg-sky-100/60 text-sky-800">
+                    Mobile-First
+                  </Badge>
+                </div>
+
+                <ul className="text-[11px] text-muted-foreground space-y-1.5 border-t border-border/50 pt-2.5">
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-sky-600 flex-shrink-0" />
+                    <span>Assigned complaint tasks in Ward 8 & 12 with live status updates</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-sky-600 flex-shrink-0" />
+                    <span>Interactive Baripada map with bin coordinates and directions</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-sky-600 flex-shrink-0" />
+                    <span>Demonstrates Assigned → In Progress → Resolved completion workflow</span>
+                  </li>
+                </ul>
+
+                <Button 
+                  onClick={() => handleLaunchDemo("worker")}
+                  disabled={demoLoadingRole !== null}
+                  variant="outline"
+                  className="w-full rounded-xl font-bold text-xs h-10 border-sky-600 text-sky-700 hover:bg-sky-50"
+                >
+                  {demoLoadingRole === "worker" ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Authenticating Worker Session...
+                    </>
+                  ) : (
+                    "Launch Worker Demo (Reviewer Mode)"
+                  )}
+                </Button>
+              </div>
             </div>
           )}
-          <p className="text-sm text-muted-foreground text-center">
-            {role === 'citizen' ? (
-              <>New here? <Link href="/signup" className="font-semibold text-primary">Create account</Link></>
-            ) : (
-              <>Need help? <Link href="/citizen/help" className="font-semibold text-primary">Contact support</Link></>
-            )}
+
+          {/* TAB 2: STANDARD CREDENTIAL LOGIN */}
+          {activeTab === "credentials" && (
+            <form onSubmit={handleStandardSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="id" className="text-xs font-semibold">
+                  {isAdminPortal ? 'Admin Username or Email' : 'Registered Email Address'}
+                </Label>
+                <Input 
+                  id="id" 
+                  type="text"
+                  placeholder={isAdminPortal ? "admin@baripadawasteIQ" : "citizen@example.com"} 
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  required 
+                  className="h-11 rounded-xl text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" text-xs font-semibold>Password</Label>
+                </div>
+                <div className="relative">
+                  <Input 
+                    id="password" 
+                    type={showPassword ? "text" : "password"} 
+                    placeholder="••••••••" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required 
+                    className="h-11 rounded-xl pr-10 text-sm"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <Button type="submit" className="w-full h-11 rounded-xl font-bold text-sm" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying Credentials...
+                  </>
+                ) : "Sign In to Account"}
+              </Button>
+            </form>
+          )}
+        </CardContent>
+
+        <CardFooter className="flex flex-col gap-3 border-t border-border/40 bg-slate-50/50 py-4 px-6 text-center">
+          <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <Lock className="h-3.5 w-3.5 text-slate-400" />
+            <span>Role-Based Authorization backed by Firestore Rules</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Need citizen registration? <Link href="/signup" className="font-semibold text-primary hover:underline">Create Citizen Account</Link>
           </p>
         </CardFooter>
       </Card>
@@ -224,7 +433,11 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
       <LoginForm />
     </Suspense>
   )

@@ -21,11 +21,31 @@ import {
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
+import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase"
+import { doc } from "firebase/firestore"
 
 export default function AdminSettings() {
   const { toast } = useToast()
+  const { user } = useUser()
+  const db = useFirestore()
+
+  const userRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null
+    return doc(db, "users", user.uid)
+  }, [db, user?.uid])
+  const { data: userData } = useDoc(userRef)
+  const isDemo = userData?.isDemo === true
 
   const handleSave = () => {
+    if (isDemo) {
+      toast({
+        variant: "destructive",
+        title: "Reviewer Demo Sandbox",
+        description: "Production system configuration is locked in demo mode to protect live municipality data.",
+      })
+      return
+    }
+
     toast({
       title: "System Config Updated",
       description: "Global settings have been pushed to all wards.",
@@ -34,6 +54,25 @@ export default function AdminSettings() {
 
   return (
     <div className="min-h-screen bg-background p-6 space-y-8">
+      {isDemo && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50/90 p-4 flex items-start gap-3 shadow-sm">
+          <Shield className="h-5 w-5 text-amber-700 mt-0.5 flex-shrink-0" />
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Badge className="bg-amber-600 text-white text-[10px] uppercase font-bold">
+                Reviewer Demo Mode
+              </Badge>
+              <h4 className="text-sm font-bold text-amber-900">
+                Production Settings Locked
+              </h4>
+            </div>
+            <p className="text-xs text-amber-800 leading-relaxed">
+              In accordance with civic hackathon evaluation security guidelines, modifying global municipal parameters, live API keys, and database purging actions is locked for reviewer accounts. All diagnostic metrics and configuration fields remain inspectable.
+            </p>
+          </div>
+        </div>
+      )}
+
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild className="md:hidden">
@@ -44,9 +83,13 @@ export default function AdminSettings() {
             <p className="text-muted-foreground font-medium">Manage global app parameters and ward protocols</p>
           </div>
         </div>
-        <Button onClick={handleSave} className="rounded-xl font-bold px-8 h-12 flex gap-2">
+        <Button 
+          onClick={handleSave} 
+          disabled={isDemo}
+          className="rounded-xl font-bold px-8 h-12 flex gap-2"
+        >
           <Save className="h-4 w-4" />
-          Save Changes
+          {isDemo ? "Settings Locked (Demo)" : "Save Changes"}
         </Button>
       </header>
 

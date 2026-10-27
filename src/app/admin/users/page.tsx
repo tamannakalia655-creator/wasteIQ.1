@@ -20,9 +20,9 @@ export default function UserManagement() {
     if (!db || !user?.uid) return null
     return doc(db, "users", user.uid)
   }, [db, user?.uid])
-  
-  const { data: userData, isLoading: isUserDataLoading } = useDoc(userRef)
+    const { data: userData, isLoading: isUserDataLoading } = useDoc(userRef)
   const isAdmin = !isUserDataLoading && userData?.role === 'admin'
+  const isDemo = userData?.isDemo === true
 
   const citizensQuery = useMemoFirebase(() => {
     if (!db || !isAdmin) return null
@@ -44,6 +44,25 @@ export default function UserManagement() {
 
   return (
     <div className="min-h-screen bg-background p-6 space-y-6">
+      {isDemo && (
+        <div className="rounded-2xl border border-blue-200 bg-blue-50/90 p-4 flex items-start gap-3 shadow-sm">
+          <Users className="h-5 w-5 text-blue-700 mt-0.5 flex-shrink-0" />
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Badge className="bg-blue-600 text-white text-[10px] uppercase font-bold">
+                Reviewer Demo Sandbox
+              </Badge>
+              <h4 className="text-sm font-bold text-blue-900">
+                Citizen Identity & PII Protected
+              </h4>
+            </div>
+            <p className="text-xs text-blue-800 leading-relaxed">
+              Real citizen credentials and contacts are protected under civic privacy standards. Reviewers can safely examine citizen activity, participation distribution, and verification counts.
+            </p>
+          </div>
+        </div>
+      )}
+
       <header className="space-y-1">
         <h1 className="text-3xl font-bold tracking-tight">Citizen Database</h1>
         <p className="text-muted-foreground">Monitor user activity and community engagement across Baripada</p>

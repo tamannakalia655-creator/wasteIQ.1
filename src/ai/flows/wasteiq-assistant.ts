@@ -60,7 +60,28 @@ const wasteiqAssistantFlow = ai.defineFlow(
     outputSchema: WasteIQAssistantOutputSchema,
   },
   async (input) => {
-    const {output} = await wasteiqAssistantPrompt(input);
-    return output!;
+    try {
+      const {output} = await wasteiqAssistantPrompt(input);
+      if (output?.answer) return output;
+    } catch (err) {
+      console.error("wasteiqAssistantPrompt error, using Baripada knowledge fallback:", err);
+    }
+
+    const q = input.query.toLowerCase();
+    let answer = "WasteIQ is the smart municipal waste platform for Baripada, Mayurbhanj. You can find smart bins on the map, file reports, or check our disposal guide.";
+
+    if (q.includes("bin") || q.includes("map") || q.includes("where")) {
+      answer = "There are 140 smart sensor-equipped bins across all 28 wards in Baripada. You can check real-time fill levels and get directions by opening the Waste Map from your dashboard.";
+    } else if (q.includes("report") || q.includes("complain") || q.includes("overflow") || q.includes("dirty")) {
+      answer = "To report an issue, tap 'Report an Issue' on your Citizen Dashboard. Select the issue type, enter your location or landmark, and submit. Sanitation workers assigned to your ward will be dispatched.";
+    } else if (q.includes("reward") || q.includes("point")) {
+      answer = "Citizens earn +10 Eco Points for each verified community waste report submitted. Accumulated points advance your Eco Champion rank and unlock civic badges.";
+    } else if (q.includes("color") || q.includes("green") || q.includes("blue") || q.includes("red")) {
+      answer = "🟢 Green Bins are for Wet / Biodegradable food waste. 🔵 Blue Bins are for Dry recyclables like plastics, paper, and metal cans. 🔴 Red Bins are for Hazardous and Sanitary waste.";
+    } else if (q.includes("ward") || q.includes("baripada")) {
+      answer = "Baripada Municipality has 28 wards, from Budhikhamari (Ward 1) to Mayurbhanj Palace Gate (Ward 28). Each ward has assigned sanitation workers and smart bins.";
+    }
+
+    return { answer };
   }
 );
