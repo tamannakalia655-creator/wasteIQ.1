@@ -1,0 +1,54 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper to check for admin role safely
+    function isAdmin() {
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return isSignedIn() && exists(userPath) && get(userPath).data.role == 'admin';
+    }
+
+    // Helper to check for worker role safely
+    function isWorker() {
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return isSignedIn() && exists(userPath) && get(userPath).data.role == 'worker';
+    }
+
+    // Base user documents and role-specific profiles
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && isAdmin();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow delete: if isSignedIn() && isAdmin();
+      
+      // Allow access to all nested profile data for owners and admins
+      match /{allPaths=**} {
+        allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      }
+    }
+
+    // Complaints - Explicitly allow list/get for all signed-in users
+    match /complaints/{complaintId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (isAdmin() || isWorker());
+      allow delete: if isSignedIn() && isAdmin();
+    }
+
+    // Broadcast notifications - Explicitly allow list/get for all signed-in users
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Static reference data
+    match /wards/{id} { allow read: if isSignedIn(); }
+    match /smartBins/{id} { allow read: if isSignedIn(); }
+  }
+}

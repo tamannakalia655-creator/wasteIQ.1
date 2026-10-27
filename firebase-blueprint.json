@@ -1,0 +1,126 @@
+
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "type": "object",
+      "description": "Represents a core user account in the WasteIQ system.",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "mobileNumber": { "type": "string" },
+        "fullName": { "type": "string" },
+        "wardId": { "type": "string" },
+        "role": { "type": "string", "enum": ["citizen", "worker", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "role"]
+    },
+    "AdminProfile": {
+      "title": "AdminProfile",
+      "type": "object",
+      "description": "Profile data for application administrators.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "mobileNumber": { "type": "string" }
+      },
+      "required": ["id", "userId"]
+    },
+    "CitizenProfile": {
+      "title": "CitizenProfile",
+      "type": "object",
+      "description": "Profile data for citizen users.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "fullName": { "type": "string" },
+        "address": { "type": "string" },
+        "wardId": { "type": "string" },
+        "totalRewardPoints": { "type": "number" },
+        "citizenId": { "type": "string" }
+      },
+      "required": ["id", "userId", "fullName"]
+    },
+    "WorkerProfile": {
+      "title": "WorkerProfile",
+      "type": "object",
+      "description": "Profile data for sanitation workers.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "workerName": { "type": "string" },
+        "workerId": { "type": "string" },
+        "assignedWardId": { "type": "string" },
+        "contactNumber": { "type": "string" }
+      },
+      "required": ["id", "userId", "workerName"]
+    },
+    "Complaint": {
+      "title": "Complaint",
+      "type": "object",
+      "description": "A waste-related report filed by a citizen.",
+      "properties": {
+        "id": { "type": "string" },
+        "citizenId": { "type": "string" },
+        "citizenName": { "type": "string" },
+        "type": { "type": "string" },
+        "location": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Assigned", "Resolved"] },
+        "priority": { "type": "string", "enum": ["Low", "Medium", "High", "Critical"] },
+        "assignedWorkerId": { "type": "string" },
+        "assignedWorkerName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "citizenId", "type", "location", "status", "priority"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "type": "object",
+      "description": "A broadcast message from administrators to users.",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "alert", "campaign", "system"] },
+        "target": { "type": "string", "enum": ["all", "citizens", "workers"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "message", "type", "target", "createdAt"]
+    }
+  },
+  "auth": {
+    "providers": ["password"]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": { "entityName": "User", "schema": { "$ref": "#/backend/entities/User" } }
+      },
+      {
+        "path": "/users/{userId}/adminProfile/profile",
+        "definition": { "entityName": "AdminProfile", "schema": { "$ref": "#/backend/entities/AdminProfile" } }
+      },
+      {
+        "path": "/users/{userId}/citizenProfile/profile",
+        "definition": { "entityName": "CitizenProfile", "schema": { "$ref": "#/backend/entities/CitizenProfile" } }
+      },
+      {
+        "path": "/users/{userId}/workerProfile/profile",
+        "definition": { "entityName": "WorkerProfile", "schema": { "$ref": "#/backend/entities/WorkerProfile" } }
+      },
+      {
+        "path": "/complaints/{complaintId}",
+        "definition": { "entityName": "Complaint", "schema": { "$ref": "#/backend/entities/Complaint" } }
+      },
+      {
+        "path": "/notifications/{notificationId}",
+        "definition": { "entityName": "Notification", "schema": { "$ref": "#/backend/entities/Notification" } }
+      }
+    ]
+  }
+}

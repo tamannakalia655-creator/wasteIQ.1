@@ -1,0 +1,7 @@
+{
+  "name": "WasteIQ",
+  "description": "Smarter Waste Management. Cleaner Communities. Smart civic waste management and monitoring platform for Baripada, Odisha.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
